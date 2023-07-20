@@ -1,4 +1,3 @@
----
 - name: Deploy Web Server
   hosts: web_servers
   become: true
@@ -6,7 +5,7 @@
   tasks:
     - name: Install apache web server
       package:
-        name: apache2  # Replace with the appropriate package name for your OS
+        name: httpd
         state: present
 
     - name: copy index.html file
@@ -24,14 +23,14 @@
 
     - name: Enable apacheservice
       service:
-        name: apache2
+        name: httpd
         state: started
         enabled: true
 
     - name: Generate self-signed SSL certificate
       openssl_certificate:
-        path: /etc/apache2/ssl/apache.crt
-        privatekey_path: /etc/apache2/ssl/apache.key
+        path: /etc/httpd/ssl/apache.crt
+        privatekey_path: /etc/httpd/ssl/apache.key
         common_name: "example.com"  # Replace with your domain name
         state: present
 
@@ -39,21 +38,30 @@
       apache2_module:
         name: ssl
         state: present
+
     - name: Configure Apache SSL virtual host
-      template:
-        src: templates/apache_ssl.conf.j2
-        dest: /etc/apache2/sites-available/default-ssl.conf
+      lineinfile:
+        path: /etc/httpd/conf.d/ssl.conf
+        regexp: '^#?<VirtualHost _default_:443>'
+        line: '<VirtualHost _default_:443>'
+        state: present
+        insertafter: '^#?<IfModule mod_ssl.c>'
       notify:
         - Restart Apache
 
     - name: Enable default SSL virtual host
-      apache2_site:
-        name: default-ssl
+      lineinfile:
+        path: /etc/httpd/conf.d/ssl.conf
+        regexp: '^#?</VirtualHost>'
+        line: '</VirtualHost>'
         state: present
+        insertafter: '</VirtualHost>'
+      notify:
+        - Restart Apache
 
-    - name: Validate Apache service status  
+    - name: Validate Apache service status
       systemd:
-        name: apache2
+        name: httpd
         state: started
 
     - name: Validate web server response
@@ -66,3 +74,4 @@
         url: http://localhost
         status_code: 301
       register: redirect_response
+
