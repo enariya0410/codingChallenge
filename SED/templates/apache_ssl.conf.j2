@@ -1,0 +1,11 @@
+<VirtualHost *:443>
+  ServerName example.com  # Replace with your domain name
+  DocumentRoot /var/www/html
+
+  SSLEngine on
+  SSLCertificateFile /etc/apache2/ssl/apache.crt  # Path to your SSL certificate
+  SSLCertificateKeyFile /etc/apache2/ssl/apache.key  # Path to your SSL private key
+
+  ErrorLog ${APACHE_LOG_DIR}/error.log
+  CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>

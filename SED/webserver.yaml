@@ -1,0 +1,68 @@
+---
+- name: Deploy Web Server
+  hosts: web_servers
+  become: true
+
+  tasks:
+    - name: Install apache web server
+      package:
+        name: apache2  # Replace with the appropriate package name for your OS
+        state: present
+
+    - name: copy index.html file
+      copy:
+        content: |
+          <html>
+          <head>
+          <title>Hello World</title>
+          </head>
+          <body>
+          <h1>Hello World!</h1>
+          </body>
+          </html>
+        dest: /var/www/html/index.html
+
+    - name: Enable apacheservice
+      service:
+        name: apache2
+        state: started
+        enabled: true
+
+    - name: Generate self-signed SSL certificate
+      openssl_certificate:
+        path: /etc/apache2/ssl/apache.crt
+        privatekey_path: /etc/apache2/ssl/apache.key
+        common_name: "example.com"  # Replace with your domain name
+        state: present
+
+    - name: Enable SSL module
+      apache2_module:
+        name: ssl
+        state: present
+    - name: Configure Apache SSL virtual host
+      template:
+        src: templates/apache_ssl.conf.j2
+        dest: /etc/apache2/sites-available/default-ssl.conf
+      notify:
+        - Restart Apache
+
+    - name: Enable default SSL virtual host
+      apache2_site:
+        name: default-ssl
+        state: present
+
+    - name: Validate Apache service status  
+      systemd:
+        name: apache2
+        state: started
+
+    - name: Validate web server response
+      uri:
+        url: http://localhost
+      register: response
+
+    - name: Validate HTTP to HTTPS redirection
+      uri:
+        url: http://localhost
+        status_code: 301
+      register: redirect_response
